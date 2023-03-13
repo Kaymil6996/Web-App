@@ -1,87 +1,44 @@
 const express = require('express');
-const fs = require('fs');
+const mysql = require('mysql2');
+
+// create the connection to the database
+const connection = mysql.createConnection({
+  host: 'localhost',
+  user: 'root',
+  database: 'webowe'
+});
+
+// connect to the database
+connection.connect((error) => {
+  if (error) {
+    console.error('Error connecting to database: ', error);
+    return;
+  }
+
+  console.log('Connected to database successfully');
+});
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const DB_FILE = 'db.json';
 
-
-app.use(express.json());
-
-app.post('/users', (req, res) => {
-
-    let data = [];
-    try {
-        data = JSON.parse(fs.readFileSync(DB_FILE));
-    } catch (err) { }
-
-    data.push(req.body);
-
-    fs.writeFileSync(DB_FILE, JSON.stringify(data));
-
-    res.status(201).send('User created');
-});
-
-
-app.get('/users', (req, res) => {
-
-    let data = [];
-    try {
-        data = JSON.parse(fs.readFileSync(DB_FILE));
-    } catch (err) { }
-
-    res.send(data);
-});
-
-
-app.put('/users', (req, res) => {
-
-    let data = [];
-    try {
-        data = JSON.parse(fs.readFileSync(DB_FILE));
-    } catch (err) { }
-
-
-    const user = data.find((u) => u.id === req.params.id);
-
-    if (!user) {
-        return res.status(404).send('User not found');
+// set up routes
+app.get('/', (req, res) => {
+  connection.query('SELECT * FROM dane', (error, results) => {
+    if (error) {
+      console.error('Error fetching data from database: ', error);
+      res.status(500).send('Error fetching data from database');
+      return;
     }
 
+    res.send(results);
+    console.log(results)
+  });
+});
 
-    user.name = req.body.name;
-    user.email = req.body.email;
-
-    fs.writeFileSync(DB_FILE, JSON.stringify(data));
-
-    res.send('User updated');
+// start the server
+app.listen(3000, () => {
+  console.log('Server started on port 3000');
 });
 
 
-app.delete('/users', (req, res) => {
-
-    let data = [];
-    try {
-        data = JSON.parse(fs.readFileSync(DB_FILE));
-    } catch (err) { }
 
 
-    const index = data.findIndex((u) => u.email === req.params.email);
-
-    if (index === -1) {
-        return res.status(404).send('User not found');
-    }
-
-
-    data.splice(index, 1);
-
-
-    fs.writeFileSync(DB_FILE, JSON.stringify(data));
-
-    res.send('User deleted');
-});
-
-
-app.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
-});
